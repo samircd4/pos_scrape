@@ -37,7 +37,7 @@ def get_orders(day, month, year, order_type):
     orders = []
     existing_orders = read_data()
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=False, slow_mo=2000)
+        browser = p.firefox.launch(headless=False, slow_mo=2000)
         context = browser.new_context(storage_state='login.json')
         context.set_default_timeout(60000)
         page = context.new_page()
@@ -93,6 +93,7 @@ def get_orders(day, month, year, order_type):
             table = Table(show_header=True, header_style="bold magenta")
             table.add_column("created_date", justify="right", style="cyan", no_wrap=True)
             table.add_column("Order ID", style="dim", justify="right")
+            table.add_column("Order Type", style="dim", justify="right")
             table.add_column("customer", style="magenta")
             table.add_column("quantity_details", style="magenta")
             table.add_column("unit_price", style="magenta")
@@ -137,6 +138,7 @@ def get_orders(day, month, year, order_type):
                     button.click()
                     page.wait_for_timeout(1000)
                     products_len = i.query_selector_all('div#line-item-group')
+                    
                     for p in products_len:
                         order_copy = order.copy()
                         qty = p.query_selector('div.cmaYaQaZ0').inner_text()
@@ -156,15 +158,17 @@ def get_orders(day, month, year, order_type):
                         order_copy['tax'] = tax
                         order_copy['subtotal'] = subtotal
                         orders.append(order_copy)
-                        table.add_row(created_date,order_id, customer,quantity_details, unit_price, pay_status, subtotal)
+                        table.add_row(created_date,order_id,order_type, customer,quantity_details, unit_price, pay_status, subtotal)
                         # print(order)
-
             except Exception as e:
                 print(f'{order_id} Order id is not scraped due to {e}')
+                with open('error.txt', 'a') as f:
+                    f.write(f'{order_id} Order id is not scraped due to {e}\n')
                 save_data(orders)
-                return
+                continue
+            
             console.print(table)
-            console.log(f'{current_num}/{len(items)}')
+            console.log(f'{current_num}/{len(items)} -> Date: {int(month)+1}-{day}-{year} <-')
         page.wait_for_timeout(1000)
     
     save_data(orders)
